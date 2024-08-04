@@ -1,0 +1,22 @@
+name: VHDL Testbenches
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    
+    container-action:
+        runs-on: ubuntu-latest
+        container: ghdl/vunit:mcode-master
+        steps:
+            - name: Install git on container
+              run: |
+                apt update
+                apt install -y git
+
+            - uses: actions/checkout@v3
+              with:
+                submodules: recursive
+
+            - run: python ./python/run.py
