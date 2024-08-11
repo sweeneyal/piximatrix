@@ -15,9 +15,12 @@ library universal;
 
 library piximatrix;
 
+library tb_piximatrix;
+
 entity tb_LedMatrixInterface is
     generic (
-        runner_cfg : string
+        runner_cfg     : string;
+        encoded_tb_cfg : string
     );
 end entity tb_LedMatrixInterface;
 
@@ -26,7 +29,19 @@ architecture tb of tb_LedMatrixInterface is
     constant cSclkFrequency_Hz  : natural := 10e6;
     constant cPanelLength_pix   : natural := 64;
     constant cPanelWidth_pix    : natural := 64;
-    constant cColorWidth_bits   : natural := 4;
+    constant cColorWidth_bits   : natural := 8;
+
+    type tb_cfg_t is record
+        input_path  : string;
+        output_path : string;
+    end record tb_cfg_t;
+
+    impure function decode (enc_tb_cfg : string) return tb_cfg_t is
+    begin
+        return (input_path=>get(enc_tb_cfg, "input_path"), output_path=>get(enc_tb_cfg, "output_path"));
+    end function;
+
+    constant tb_cfg : tb_cfg_t := decode(encoded_tb_cfg);
 
     signal i_clk    : std_logic := '0';
     signal i_resetn : std_logic := '0';
@@ -73,6 +88,41 @@ begin
         o_rgb1   => o_rgb1
     );
 
+    eRom : entity tb_piximatrix.ImageRom
+    generic map (
+        cInputPath       => tb_cfg.input_path,
+        cPanelWidth_pix  => cPanelWidth_pix,
+        cPanelLength_pix => cPanelLength_pix,
+        cColorWidth_bits => cColorWidth_bits
+    ) port map (
+        i_clk    => i_clk,
+        i_resetn => i_resetn,
+
+        i_addr   => o_addr,
+        i_select => o_select,
+        i_ren    => o_ren,
+
+        o_dvalid => i_dvalid,
+        o_rgb0   => i_rgb0,
+        o_rgb1   => i_rgb1
+    );
+
+    eModel : entity tb_piximatrix.LedMatrixModel
+    generic map (
+        cOutputPath      => tb_cfg.output_path,
+        cPanelWidth_pix  => cPanelWidth_pix,
+        cPanelLength_pix => cPanelLength_pix,
+        cColorWidth_bits => cColorWidth_bits
+    ) port map (
+        i_sclk    => o_sclk, 
+        i_a       => o_a,
+        i_rgb0    => o_rgb0,
+        i_rgb1    => o_rgb1,
+        i_blank   => o_blank,
+        i_latch   => o_latch,
+        o_imgdone => open
+    );
+
     Stimuli: process
     begin
         test_runner_setup(runner, runner_cfg);
@@ -82,6 +132,9 @@ begin
                 wait until rising_edge(i_clk);
                 wait for 100 ps;
                 i_resetn <= '1';
+                for ii in 0 to 400000 loop
+                    wait until rising_edge(i_clk);
+                end loop;
             end if;
         end loop;
         test_runner_cleanup(runner);

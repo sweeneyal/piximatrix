@@ -163,3 +163,7 @@ cython_debug/
 
 
 vunit_out
+scratch
+python/lena_post.txt
+python/lena.txt
+python/lena64x64.png

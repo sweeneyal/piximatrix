@@ -55,8 +55,8 @@ entity LedMatrixInterface is
 end entity LedMatrixInterface;
 
 architecture rtl of LedMatrixInterface is
-    constant cSclkPeriod_cc : natural := cSclkFrequency_Hz / cClockFrequency_Hz;
-    type state_t is (RESET, FETCH, SHIFT, BLANK, SET_ADDRESS, LATCH, UNBLANK);
+    constant cSclkPeriod_cc : natural := cClockFrequency_Hz / cSclkFrequency_Hz;
+    type state_t is (RESET, FETCH, FETCH_LAST, SHIFT, BLANK, SET_ADDRESS, LATCH, UNBLANK);
     type matrix_engine_t is record
         state    : state_t;
         pix_col  : natural range 0 to cPanelLength_pix;
@@ -136,12 +136,30 @@ begin
                         else
                             o_ren <= '0';
                             matrix_engine.pix_col <= 0;
-                            if (matrix_engine.pix_idx < cColorWidth_bits - 1) then
-                                matrix_engine.pix_idx <= matrix_engine.pix_idx + 1;
-                            end if;
-                            matrix_engine.state <= SHIFT;
+                            matrix_engine.state <= FETCH_LAST;
                         end if;
 
+                        if (i_dvalid = '1') then
+                            matrix_engine.red0(0)   <= i_rgb0(0);
+                            matrix_engine.green0(0) <= i_rgb0(1);
+                            matrix_engine.blue0(0)  <= i_rgb0(2);
+
+                            matrix_engine.red1(0)   <= i_rgb1(0);
+                            matrix_engine.green1(0) <= i_rgb1(1);
+                            matrix_engine.blue1(0)  <= i_rgb1(2);
+                            for ii in 1 to cPanelLength_pix - 1 loop
+                                matrix_engine.red0(ii)   <= matrix_engine.red0(ii - 1);
+                                matrix_engine.green0(ii) <= matrix_engine.green0(ii - 1);
+                                matrix_engine.blue0(ii)  <= matrix_engine.blue0(ii - 1);
+
+                                matrix_engine.red1(ii)   <= matrix_engine.red1(ii - 1);
+                                matrix_engine.green1(ii) <= matrix_engine.green1(ii - 1);
+                                matrix_engine.blue1(ii)  <= matrix_engine.blue1(ii - 1);
+                            end loop;
+                        end if;
+                    
+                    when FETCH_LAST => 
+                        matrix_engine.state <= SHIFT;
                         if (i_dvalid = '1') then
                             matrix_engine.red0(0)   <= i_rgb0(0);
                             matrix_engine.green0(0) <= i_rgb0(1);
@@ -194,7 +212,7 @@ begin
                         else
                             o_sclk <= '0';
                             matrix_engine.counter <= 0;
-                            if (matrix_engine.pix_col < cPanelLength_pix) then
+                            if (matrix_engine.pix_col < cPanelLength_pix - 1) then
                                 matrix_engine.pix_col <= matrix_engine.pix_col + 1;
                             else
                                 matrix_engine.pix_col <= 0;
@@ -232,7 +250,23 @@ begin
                     when UNBLANK =>
                         o_blank             <= '0';
                         o_latch             <= '0';
-                        matrix_engine.state <= FETCH;
+                        if (matrix_engine.counter < cSclkPeriod_cc * (2 ** (matrix_engine.pix_idx))) then
+                            matrix_engine.counter <= matrix_engine.counter + 1;
+                        else
+                            matrix_engine.counter <= 0;
+                            matrix_engine.state <= FETCH;
+
+                            if (matrix_engine.pix_idx < cColorWidth_bits - 1) then
+                                matrix_engine.pix_idx <= matrix_engine.pix_idx + 1;
+                            else
+                                matrix_engine.pix_idx <= 0;
+                                if (matrix_engine.pix_row < cPanelWidth_pix/2 - 1) then
+                                    matrix_engine.pix_row <= matrix_engine.pix_row + 1; 
+                                else
+                                    matrix_engine.pix_row <= 0;
+                                end if;
+                            end if;
+                        end if;
                 end case;
             end if;
         end if;
