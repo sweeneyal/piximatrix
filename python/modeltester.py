@@ -1,10 +1,10 @@
-import cv2
 import math
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 def generate_test_image(img_str):
+    import cv2
     img = cv2.imread(img_str)
     height,width,channels = img.shape
     if channels != 3:

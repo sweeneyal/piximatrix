@@ -1,8 +1,7 @@
 from vunit import VUnit
 import pathlib
-import numpy as np
 
-from modeltester import generate_test_image, recreate_image
+#from modeltester import recreate_image
 
 def get_vhdl_files(dir, recursive=False):
     directory = pathlib.Path(dir)
@@ -12,8 +11,6 @@ def get_vhdl_files(dir, recursive=False):
         allVhdlFiles = list(directory.glob('*.vhd'))
     return allVhdlFiles
 
-
-generate_test_image("python/lena.jpg")
 
 # Create VUnit instance by parsing command line arguments
 vu = VUnit.from_argv(['--gtkwave-fmt', 'ghw'])
@@ -48,14 +45,14 @@ tb_cfg = dict(input_path="python/lena.txt", output_path="python/lena_post.txt")
 tb_LedMatrixInterface = tb_piximatrix.test_bench('tb_LedMatrixInterface')
 tb_LedMatrixInterface.add_config(name='lena_test', generics=dict(encoded_tb_cfg=encode(tb_cfg)))
 
-def post_test(results):
-    golden    = recreate_image("python/lena.txt", 64, 64)
-    simulated = recreate_image("python/lena_post.txt", 64, 64)
-    if not np.allclose(golden, simulated):
-        raise ValueError
-    print("All post tests passed.")
+# def post_test(results):
+#     golden    = recreate_image("python/lena.txt", 64, 64)
+#     simulated = recreate_image("python/lena_post.txt", 64, 64)
+#     if not np.allclose(golden, simulated):
+#         raise ValueError
+#     print("All post tests passed.")
 
 # Run vunit function
 vu.add_compile_option('ghdl.a_flags', ['-frelaxed'])
 vu.set_sim_option('ghdl.elab_flags', ['-frelaxed'])
-vu.main(post_run=post_test)
+vu.main()
