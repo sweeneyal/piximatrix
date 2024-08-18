@@ -72,6 +72,9 @@ begin
         i_clk    => i_clk,
         i_resetn => i_resetn,
 
+        i_dimmer => (others => '0'),
+        i_dmvalid => '0',
+
         o_addr   => o_addr,
         o_select => o_select,
         o_ren    => o_ren,

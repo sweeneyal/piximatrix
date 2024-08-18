@@ -24,6 +24,11 @@ entity LedMatrixInterface is
         i_clk : in std_logic;
         -- active low reset synchronous to system clock
         i_resetn : in std_logic;
+
+        -- number of additional clock cycles early to dim for.
+        i_dimmer : in std_logic_vector(clog2(cPanelLength_pix) - 1 downto 0);
+        -- indicator that value on dimmer bus is valid.
+        i_dmvalid : in std_logic;
         
         -- pixel fetch address
         o_addr : out std_logic_vector(clog2(cPanelLength_pix * cPanelWidth_pix / 2) - 1 downto 0);
@@ -69,6 +74,7 @@ architecture rtl of LedMatrixInterface is
         green1   : std_logic_vector(cPanelLength_pix - 1 downto 0);
         blue1    : std_logic_vector(cPanelLength_pix - 1 downto 0);
         counter  : natural range 0 to 65535;
+        dimmer   : natural range 0 to cPanelLength_pix - 1;
     end record matrix_engine_t;
     signal matrix_engine : matrix_engine_t := (
         state    => RESET,
@@ -81,7 +87,8 @@ architecture rtl of LedMatrixInterface is
         red1     => (others => '0'),
         green1   => (others => '0'),
         blue1    => (others => '0'),
-        counter  => 0
+        counter  => 0,
+        dimmer   => 0
     );
 begin
     
@@ -100,7 +107,8 @@ begin
                     red1     => (others => '0'),
                     green1   => (others => '0'),
                     blue1    => (others => '0'),
-                    counter  => 0
+                    counter  => 0,
+                    dimmer   => 0
                 );
 
                 o_addr   <= (others => '0');
@@ -113,6 +121,10 @@ begin
                 o_rgb0   <= "000";
                 o_rgb1   <= "000";
             else
+                if (i_dmvalid = '1') then
+                    matrix_engine.dimmer <= to_natural(i_dimmer);
+                end if;
+
                 case matrix_engine.state is
                     when RESET =>
                         matrix_engine.state <= FETCH;
@@ -180,6 +192,12 @@ begin
                         end if;
 
                     when SHIFT =>
+                        if (matrix_engine.pix_col > matrix_engine.dimmer) then
+                            o_blank <= '1';
+                        else
+                            o_blank <= '0';
+                        end if;
+
                         if (matrix_engine.counter < cSclkPeriod_cc) then
                             matrix_engine.counter <= matrix_engine.counter + 1;
                             if (matrix_engine.counter = cSclkPeriod_cc / 2) then

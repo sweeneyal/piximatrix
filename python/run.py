@@ -1,7 +1,8 @@
 from vunit import VUnit
 import pathlib
 
-#from modeltester import recreate_image
+# from modeltester import recreate_image
+# import numpy as np
 
 def get_vhdl_files(dir, recursive=False):
     directory = pathlib.Path(dir)
@@ -55,4 +56,5 @@ tb_LedMatrixInterface.add_config(name='lena_test', generics=dict(encoded_tb_cfg=
 # Run vunit function
 vu.add_compile_option('ghdl.a_flags', ['-frelaxed'])
 vu.set_sim_option('ghdl.elab_flags', ['-frelaxed'])
+#vu.main(post_run=post_test)
 vu.main()
