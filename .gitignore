@@ -164,4 +164,8 @@ cython_debug/
 
 vunit_out
 scratch
-python/lena64x64.png
+python/*.png
+
+kicad/piximatrix_pmod/piximatrix_pmod-backups
+kicad/piximatrix_pmod/fp-info-cache
+kicad/piximatrix_pmod/sym-lib-table
